@@ -3,7 +3,7 @@ package client
 import (
 	"time"
 
-	"github.com/qbeon/webwire-go/wwrerr"
+	wwr "github.com/qbeon/webwire-go"
 )
 
 func (clt *client) backgroundReconnect() {
@@ -24,7 +24,7 @@ func (clt *client) backgroundReconnect() {
 				clt.connecting = false
 				clt.connectingLock.Unlock()
 				return
-			case wwrerr.DisconnectedErr:
+			case wwr.ErrDisconnected:
 				time.Sleep(clt.options.ReconnectionInterval)
 			default:
 				// Unexpected error

@@ -27,14 +27,14 @@ func TestReqDisconn(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Try to send a request and expect a DisconnectedErr error
+	// Try to send a request and expect a ErrDisconnected error
 	_, err = client.Connection.Request(
 		context.Background(),
 		nil,
 		wwr.Payload{Data: []byte("testdata")},
 	)
 	require.Error(t, err)
-	require.IsType(t, wwr.DisconnectedErr{}, err)
-	require.False(t, wwr.IsCanceledErr(err))
-	require.False(t, wwr.IsTimeoutErr(err))
+	require.IsType(t, wwr.ErrDisconnected{}, err)
+	require.False(t, wwr.IsErrCanceled(err))
+	require.False(t, wwr.IsErrTimeout(err))
 }

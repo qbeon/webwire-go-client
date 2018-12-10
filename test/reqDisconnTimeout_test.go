@@ -33,7 +33,7 @@ func TestReqDisconnTimeout(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Nil(t, reply)
-	require.IsType(t, wwr.TimeoutErr{}, err)
-	require.True(t, wwr.IsTimeoutErr(err))
-	require.False(t, wwr.IsCanceledErr(err))
+	require.IsType(t, wwr.ErrTimeout{}, err)
+	require.True(t, wwr.IsErrTimeout(err))
+	require.False(t, wwr.IsErrCanceled(err))
 }

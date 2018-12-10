@@ -9,9 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/qbeon/webwire-go/connopt"
+	wwr "github.com/qbeon/webwire-go"
 	"github.com/qbeon/webwire-go/message"
-	"github.com/qbeon/webwire-go/wwrerr"
 )
 
 const statusConnected uint32 = 1
@@ -92,14 +91,14 @@ func (sock *Socket) Dial(deadline time.Time) error {
 	}
 
 	if sock.server == nil {
-		return wwrerr.DisconnectedErr{
+		return wwr.ErrDisconnected{
 			Cause: fmt.Errorf("server unreachable"),
 		}
 	}
 
 	// Call the connection creation hook
 	connOpts := sock.server.OnBeforeCreation()
-	if connOpts.Connection != connopt.Accept {
+	if connOpts.Connection != wwr.Accept {
 		return errors.New("connection refused")
 	}
 
@@ -125,7 +124,7 @@ func (sock *Socket) GetWriter() (io.WriteCloser, error) {
 	// Check connection status
 	if !sock.IsConnected() {
 		sock.writerLock.Unlock()
-		return nil, wwrerr.DisconnectedErr{
+		return nil, wwr.ErrDisconnected{
 			Cause: fmt.Errorf("can't write to a closed socket"),
 		}
 	}
@@ -164,14 +163,14 @@ func (sock *Socket) resetReader() {
 
 func (sock *Socket) readWithoutDeadline() (
 	data []byte,
-	err wwrerr.SockReadErr,
+	err wwr.ErrSockRead,
 ) {
 	// Await either a message or remote/local socket closure
 	data = <-sock.getReader()
 
 	if data == nil {
 		// Socket closed
-		return nil, SockReadErr{closed: true}
+		return nil, ErrSockRead{closed: true}
 	}
 
 	return data, nil
@@ -179,7 +178,7 @@ func (sock *Socket) readWithoutDeadline() (
 
 func (sock *Socket) readWithDeadline(deadline time.Time) (
 	data []byte,
-	err wwrerr.SockReadErr,
+	err wwr.ErrSockRead,
 ) {
 	sock.readTimer.Reset(time.Until(deadline))
 
@@ -187,12 +186,12 @@ func (sock *Socket) readWithDeadline(deadline time.Time) (
 	select {
 	case <-sock.readTimer.C:
 		// Deadline exceeded
-		err = SockReadErr{err: errors.New("read deadline exceeded")}
+		err = ErrSockRead{err: errors.New("read deadline exceeded")}
 
 	case result := <-sock.getReader():
 		if result == nil {
 			// Socket closed
-			err = SockReadErr{closed: true}
+			err = ErrSockRead{closed: true}
 		} else {
 			data = result
 		}
@@ -207,14 +206,14 @@ func (sock *Socket) readWithDeadline(deadline time.Time) (
 func (sock *Socket) Read(
 	msg *message.Message,
 	deadline time.Time,
-) (err wwrerr.SockReadErr) {
+) (err wwr.ErrSockRead) {
 	// Set reader lock to ensure there's only one concurrent reader
 	sock.readLock.Lock()
 
 	// Check connection status
 	if !sock.IsConnected() {
 		sock.readLock.Unlock()
-		return SockReadErr{closed: true}
+		return ErrSockRead{closed: true}
 	}
 
 	var data []byte
@@ -238,12 +237,12 @@ func (sock *Socket) Read(
 	if parseErr != nil {
 		sock.readerErr <- nil
 		sock.readLock.Unlock()
-		return SockReadErr{err: parseErr}
+		return ErrSockRead{err: parseErr}
 	}
 	if !typeParsed {
 		sock.readerErr <- nil
 		sock.readLock.Unlock()
-		return SockReadErr{err: errors.New("no message type")}
+		return ErrSockRead{err: errors.New("no message type")}
 	}
 
 	sock.readerErr <- nil

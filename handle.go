@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/qbeon/webwire-go"
+	wwr "github.com/qbeon/webwire-go"
 	"github.com/qbeon/webwire-go/message"
 	"github.com/qbeon/webwire-go/payload"
-	"github.com/qbeon/webwire-go/wwrerr"
 )
 
 func (clt *client) handleSessionCreated(msgPayload payload.Payload) {
@@ -47,23 +47,23 @@ func (clt *client) handleSessionClosed() {
 
 func (clt *client) handleInternalError(reqIdent [8]byte) {
 	// Fail request
-	clt.requestManager.Fail(reqIdent, wwrerr.InternalErr{})
+	clt.requestManager.Fail(reqIdent, wwr.ErrInternal{})
 }
 
 func (clt *client) handleReplyShutdown(reqIdent [8]byte) {
-	clt.requestManager.Fail(reqIdent, wwrerr.ServerShutdownErr{})
+	clt.requestManager.Fail(reqIdent, wwr.ErrServerShutdown{})
 }
 
 func (clt *client) handleSessionNotFound(reqIdent [8]byte) {
-	clt.requestManager.Fail(reqIdent, wwrerr.SessionNotFoundErr{})
+	clt.requestManager.Fail(reqIdent, wwr.ErrSessionNotFound{})
 }
 
 func (clt *client) handleMaxSessConnsReached(reqIdent [8]byte) {
-	clt.requestManager.Fail(reqIdent, wwrerr.MaxSessConnsReachedErr{})
+	clt.requestManager.Fail(reqIdent, wwr.ErrMaxSessConnsReached{})
 }
 
 func (clt *client) handleSessionsDisabled(reqIdent [8]byte) {
-	clt.requestManager.Fail(reqIdent, wwrerr.SessionsDisabledErr{})
+	clt.requestManager.Fail(reqIdent, wwr.ErrSessionsDisabled{})
 }
 
 // handleMessage handles incoming messages
@@ -96,29 +96,29 @@ func (clt *client) handleMessage(msg *message.Message) (err error) {
 		clt.handleReplyShutdown(msg.MsgIdentifier)
 		// Release the buffer
 		msg.Close()
-	case message.MsgSessionNotFound:
+	case message.MsgReplySessionNotFound:
 		clt.handleSessionNotFound(msg.MsgIdentifier)
 		// Release the buffer
 		msg.Close()
-	case message.MsgMaxSessConnsReached:
+	case message.MsgReplyMaxSessConnsReached:
 		clt.handleMaxSessConnsReached(msg.MsgIdentifier)
 		// Release the buffer
 		msg.Close()
-	case message.MsgSessionsDisabled:
+	case message.MsgReplySessionsDisabled:
 		clt.handleSessionsDisabled(msg.MsgIdentifier)
 		// Release the buffer
 		msg.Close()
-	case message.MsgErrorReply:
+	case message.MsgReplyError:
 		// The message name contains the error code in case of
 		// error reply messages, while the UTF8 encoded error message is
 		// contained in the message payload
-		clt.requestManager.Fail(msg.MsgIdentifier, wwrerr.RequestErr{
+		clt.requestManager.Fail(msg.MsgIdentifier, wwr.ErrRequest{
 			Code:    string(msg.MsgName),
 			Message: string(msg.MsgPayload.Data),
 		})
 		// Release the buffer
 		msg.Close()
-	case message.MsgInternalError:
+	case message.MsgReplyInternalError:
 		clt.handleInternalError(msg.MsgIdentifier)
 		// Release the buffer
 		msg.Close()
@@ -133,12 +133,12 @@ func (clt *client) handleMessage(msg *message.Message) (err error) {
 		// because it's referenced there through the payload
 		msg.Close()
 
-	case message.MsgSessionCreated:
+	case message.MsgNotifySessionCreated:
 		clt.handleSessionCreated(msg.MsgPayload)
 		// Release the buffer after the OnSessionCreated user-space hook is
 		// executed because it's referenced there through the payload
 		msg.Close()
-	case message.MsgSessionClosed:
+	case message.MsgNotifySessionClosed:
 		// Release the buffer before calling the OnSessionClosed user-space hook
 		msg.Close()
 		clt.handleSessionClosed()

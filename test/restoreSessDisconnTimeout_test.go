@@ -31,6 +31,6 @@ func TestRestoreSessDisconnTimeout(t *testing.T) {
 		[]byte("inexistent_key"),
 	)
 	require.Error(t, err)
-	require.IsType(t, wwr.TimeoutErr{}, err)
-	require.True(t, wwr.IsTimeoutErr(err))
+	require.IsType(t, wwr.ErrTimeout{}, err)
+	require.True(t, wwr.IsErrTimeout(err))
 }

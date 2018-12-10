@@ -4,20 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/qbeon/webwire-go"
+	wwr "github.com/qbeon/webwire-go"
 	"github.com/qbeon/webwire-go/message"
-	"github.com/qbeon/webwire-go/wwrerr"
 )
 
 func (clt *client) sendRequest(
 	ctx context.Context,
 	messageType byte,
 	name []byte,
-	payload webwire.Payload,
-) (webwire.Reply, error) {
+	payload wwr.Payload,
+) (wwr.Reply, error) {
 	// Require either a name or a payload or both
 	if len(name) < 1 && len(payload.Data) < 1 {
-		return nil, wwrerr.ProtocolErr{
+		return nil, wwr.ErrProtocol{
 			Cause: fmt.Errorf("Invalid request, request message requires " +
 				"either a name, a payload or both but is missing both",
 			),
@@ -42,7 +41,7 @@ func (clt *client) sendRequest(
 		true,
 	); err != nil {
 		clt.requestManager.Fail(request.Identifier, err)
-		return nil, wwrerr.TransmissionErr{Cause: err}
+		return nil, wwr.ErrTransmission{Cause: err}
 	}
 
 	clt.heartbeat.reset()

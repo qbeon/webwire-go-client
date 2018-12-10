@@ -62,9 +62,9 @@ func TestReqRegisterOnTimeout(t *testing.T) {
 		wwr.Payload{Data: []byte("t")},
 	)
 	require.Error(t, reqErr)
-	require.IsType(t, wwr.DeadlineExceededErr{}, reqErr)
-	require.True(t, wwr.IsTimeoutErr(reqErr))
-	require.False(t, wwr.IsCanceledErr(reqErr))
+	require.IsType(t, wwr.ErrDeadlineExceeded{}, reqErr)
+	require.True(t, wwr.IsErrTimeout(reqErr))
+	require.False(t, wwr.IsErrCanceled(reqErr))
 
 	// Verify pending requests
 	require.Equal(t, 0, client.Connection.PendingRequests())

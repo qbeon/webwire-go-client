@@ -11,7 +11,7 @@ import (
 )
 
 // TestSignalDisconnNoAutoconn tests client.Signal expecting it to return a
-// DisconnectedErr when autoconn is disabled and the client is disconnected
+// ErrDisconnected when autoconn is disabled and the client is disconnected
 func TestSignalDisconnNoAutoconn(t *testing.T) {
 	// Initialize webwire server
 	setup := setupTestServer(
@@ -31,12 +31,12 @@ func TestSignalDisconnNoAutoconn(t *testing.T) {
 		clientHooks{},
 	)
 
-	// Try to send a signal and expect a DisconnectedErr error
+	// Try to send a signal and expect a ErrDisconnected error
 	err := client.Connection.Signal(
 		context.Background(),
 		nil,
 		wwr.Payload{Data: []byte("test")},
 	)
 	require.Error(t, err)
-	require.IsType(t, wwr.DisconnectedErr{}, err)
+	require.IsType(t, wwr.ErrDisconnected{}, err)
 }

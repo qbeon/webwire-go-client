@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/qbeon/webwire-go/message"
-	"github.com/qbeon/webwire-go/wwrerr"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -175,11 +174,11 @@ func (con *connection) Signal(name []byte, payload Payload) (err error) {
 // CreateSession implements the Connection interface
 func (con *connection) CreateSession(attachment SessionInfo) error {
 	if !con.srv.sessionsEnabled {
-		return wwrerr.SessionsDisabledErr{}
+		return ErrSessionsDisabled{}
 	}
 
 	if !con.sock.IsConnected() {
-		return wwrerr.DisconnectedErr{
+		return ErrDisconnected{
 			Cause: fmt.Errorf(
 				"Can't create session on disconnected connection",
 			),
@@ -248,7 +247,7 @@ func (con *connection) notifySessionCreated(newSession *Session) error {
 	if err != nil {
 		return err
 	}
-	return message.WriteMsgSessionCreated(
+	return message.WriteMsgNotifySessionCreated(
 		writer,
 		encodedSessionInfo,
 	)
@@ -260,13 +259,13 @@ func (con *connection) notifySessionClosed() error {
 	if err != nil {
 		return err
 	}
-	return message.WriteMsgSessionClosed(writer)
+	return message.WriteMsgNotifySessionClosed(writer)
 }
 
 // CloseSession implements the Connection interface
 func (con *connection) CloseSession() error {
 	if !con.srv.sessionsEnabled {
-		return wwrerr.SessionsDisabledErr{}
+		return ErrSessionsDisabled{}
 	}
 
 	con.sessionLock.Lock()

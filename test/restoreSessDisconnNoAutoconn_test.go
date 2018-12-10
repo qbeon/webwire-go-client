@@ -27,11 +27,11 @@ func TestRestoreSessDisconnNoAutoconn(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Try to restore a session and expect a DisconnectedErr error
+	// Try to restore a session and expect a ErrDisconnected error
 	err = client.Connection.RestoreSession(
 		context.Background(),
 		[]byte("inexistent_key"),
 	)
 	require.Error(t, err)
-	require.IsType(t, wwr.DisconnectedErr{}, err)
+	require.IsType(t, wwr.ErrDisconnected{}, err)
 }

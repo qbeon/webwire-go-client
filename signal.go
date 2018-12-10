@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/qbeon/webwire-go"
+	wwr "github.com/qbeon/webwire-go"
 	"github.com/qbeon/webwire-go/message"
-	"github.com/qbeon/webwire-go/wwrerr"
 )
 
 // Signal sends a signal containing the given payload to the server
 func (clt *client) Signal(
 	ctx context.Context,
 	name []byte,
-	pld webwire.Payload,
+	pld wwr.Payload,
 ) error {
 	// Apply shared lock
 	clt.apiLock.RLock()
@@ -40,7 +39,7 @@ func (clt *client) Signal(
 		clt.apiLock.RUnlock()
 
 		closeCtx()
-		return wwrerr.ProtocolErr{
+		return wwr.ErrProtocol{
 			Cause: fmt.Errorf("Invalid request, request message requires " +
 				"either a name, a payload or both but is missing both",
 			),

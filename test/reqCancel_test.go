@@ -57,9 +57,9 @@ func TestReqCancel(t *testing.T) {
 		)
 		assert.Error(t, err, "Expected a canceled-error")
 		assert.Nil(t, reply)
-		assert.IsType(t, wwr.CanceledErr{}, err)
-		assert.True(t, wwr.IsCanceledErr(err))
-		assert.False(t, wwr.IsTimeoutErr(err))
+		assert.IsType(t, wwr.ErrCanceled{}, err)
+		assert.True(t, wwr.IsErrCanceled(err))
+		assert.False(t, wwr.IsErrTimeout(err))
 		requestFinished.Done()
 	}()
 

@@ -48,6 +48,6 @@ func TestRequestNoNameNoPayload(t *testing.T) {
 		wwr.Payload{},
 	)
 	require.Error(t, err)
-	require.IsType(t, wwr.ProtocolErr{}, err)
+	require.IsType(t, wwr.ErrProtocol{}, err)
 	require.Nil(t, reply)
 }

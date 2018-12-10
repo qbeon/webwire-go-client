@@ -36,5 +36,5 @@ func TestRestoreInexistentSession(t *testing.T) {
 		[]byte("lalala"),
 	)
 	require.Error(t, sessionRestorationError)
-	require.IsType(t, wwr.SessionNotFoundErr{}, sessionRestorationError)
+	require.IsType(t, wwr.ErrSessionNotFound{}, sessionRestorationError)
 }

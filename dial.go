@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	wwr "github.com/qbeon/webwire-go"
 	"github.com/qbeon/webwire-go/message"
-	"github.com/qbeon/webwire-go/wwrerr"
 )
 
 // dial tries to dial in the server and await an approval including the endpoint
@@ -51,7 +51,7 @@ func (clt *client) dial() (srvConf message.ServerConfiguration, err error) {
 		if err := clt.conn.Read(msg, deadline); err != nil {
 			if err.IsCloseErr() {
 				// Regular connection closure
-				result <- dialResult{err: wwrerr.DisconnectedErr{
+				result <- dialResult{err: wwr.ErrDisconnected{
 					Cause: fmt.Errorf(
 						"couldn't read srv-conf message during dial: %s",
 						err,
@@ -76,7 +76,7 @@ func (clt *client) dial() (srvConf message.ServerConfiguration, err error) {
 			return
 		}
 
-		if msg.MsgType != message.MsgConf {
+		if msg.MsgType != message.MsgAcceptConf {
 			result <- dialResult{err: fmt.Errorf(
 				"unexpected message type: %d (expected server config message)",
 				msg.MsgType,
@@ -119,7 +119,7 @@ func (clt *client) dial() (srvConf message.ServerConfiguration, err error) {
 	case <-clt.dialingTimer.C:
 		// Abort due to timeout
 		atomic.StoreUint32(&abortAwait, 1)
-		err = wwrerr.DisconnectedErr{}
+		err = wwr.ErrDisconnected{}
 
 	case result := <-result:
 		srvConf = result.serverConfiguration

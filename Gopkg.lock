@@ -19,20 +19,17 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a8bf6e48be15f72bb7e81f69288ae7215f199ffef49d1a63345abaff12017fb1"
+  digest = "1:7b85f1c1e2387e58201f4a258f4529604b82d9644be67339f53c3c8c15e971bf"
   name = "github.com/qbeon/webwire-go"
   packages = [
     ".",
-    "connopt",
     "message",
     "payload",
     "requestManager",
-    "test",
     "transport/memchan",
-    "wwrerr",
   ]
   pruneopts = "UT"
-  revision = "f79e2f3d877b6b754694b5a2d7c949398eed2345"
+  revision = "d5302ebe83c6c87804f0f2c9ca9f4cc0b204f416"
 
 [[projects]]
   digest = "1:c40d65817cdd41fac9aa7af8bed56927bb2d6d47e4fea566a74880f5c2b1c41e"
@@ -61,9 +58,7 @@
     "github.com/qbeon/webwire-go/message",
     "github.com/qbeon/webwire-go/payload",
     "github.com/qbeon/webwire-go/requestManager",
-    "github.com/qbeon/webwire-go/test",
     "github.com/qbeon/webwire-go/transport/memchan",
-    "github.com/qbeon/webwire-go/wwrerr",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
   ]

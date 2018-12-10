@@ -22,7 +22,7 @@ func (clt *client) requestSessionRestoration(
 ) {
 	reply, err := clt.sendNamelessRequest(
 		ctx,
-		message.MsgRestoreSession,
+		message.MsgRequestRestoreSession,
 		payload.Payload{
 			Encoding: webwire.EncodingBinary,
 			Data:     sessionKey,
