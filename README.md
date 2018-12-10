@@ -62,7 +62,6 @@
   - [Sessions](#sessions)
   - [Automatic Session Restoration](#automatic-session-restoration)
   - [Automatic Connection Maintenance](#automatic-connection-maintenance)
-  - [Graceful Shutdown](#graceful-shutdown)
   - [Security](#security)
 
 
@@ -102,18 +101,21 @@ Clients can initiate multiple simultaneous requests and receive replies asynchro
 // Send a request to the server,
 // this will block the goroutine until either a reply is received
 // or the default timeout triggers (if there is one)
-reply, err := client.Request(nil, nil, wwr.NewPayload(
-  wwr.EncodingBinary,
-  []byte("sudo rm -rf /"),
-))
+reply, err := client.Request(
+	context.Background(), // No cancelation, default timeout
+	nil,                  // No name
+	wwr.Payload{
+		Data: []byte("sudo rm -rf /"), // Binary request payload
+	},
+)
+defer reply.Close() // Close the reply
 if err != nil {
-  // Oh oh, request failed for some reason!
+	// Oh oh, the request failed for some reason!
 }
-defer reply.Close()
 reply.PayloadUtf8() // Here we go!
  ```
 
-Requests will respect cancelable contexts and provided deadlines
+Requests will respect cancelable contexts and deadlines
 
 ```go
 cancelableCtx, cancel := context.WithCancel(context.Background())
@@ -123,32 +125,33 @@ defer cancelTimed()
 
 // Send a cancelable request to the server with a 1 second deadline
 // will block the goroutine for 1 second at max
-reply, err := client.Request(timedCtx, nil, wwr.Payload(
-  wwr.EncodingUtf8,
-  []byte("hurry up!"),
-))
+reply, err := client.Request(timedCtx, nil, wwr.Payload{
+	Encoding: wwr.EncodingUtf8,
+	Data:     []byte("hurry up!"),
+})
+defer reply.Close()
+
 // Investigate errors manually...
 switch err.(type) {
-  case wwr.ErrCanceled:
-    // Request was prematurely canceled by the sender
-  case wwr.ErrDeadlineExceeded:
-    // Request timed out, server didn't manage to reply
-    // within the user-specified context deadline
-  case wwr.TimeoutErr:
-    // Request timed out, server didn't manage to reply
-    // within the specified default request timeout duration
-  case nil:
-    // Replied successfully
-    defer reply.Close()
+case wwr.ErrCanceled:
+	// Request was prematurely canceled by the sender
+case wwr.ErrDeadlineExceeded:
+	// Request timed out, server didn't manage to reply
+	// within the user-specified context deadline
+case wwr.TimeoutErr:
+	// Request timed out, server didn't manage to reply
+	// within the specified default request timeout duration
+case nil:
+	// Replied successfully
 }
 
 // ... or check for a timeout error the easier way:
 if err != nil {
-  if wwr.IsTimeoutErr(err) {
-    // Timed out due to deadline excess or default timeout
-  } else {
-    // Unexpected error
-  }
+	if wwr.IsTimeoutErr(err) {
+		// Timed out due to deadline excess or default timeout
+	} else {
+		// Unexpected error
+	}
 }
 
 reply // Just in time!
@@ -160,11 +163,11 @@ Individual clients can send signals to the server. Signals are one-way messages 
 ```go
 // Send signal to server
 err := client.Signal(
-  "eventA",
-  wwr.NewPayload(
-    wwr.EncodingUtf8,
-    []byte("something"),
-  ),
+	[]byte("eventA"),
+	wwr.Payload{
+		Encoding: wwr.EncodingUtf8,
+		Data:     []byte("something"),
+	},
 )
 ```
 
@@ -172,19 +175,11 @@ err := client.Signal(
 The server also can send signals to individual connected clients.
 
 ```go
-func OnRequest(
-  _ context.Context,
-  conn wwr.Connection,
-  _ wwr.Message,
-) (wwr.Payload, error) {
-  // Send a signal to the client before replying to the request
-  conn.Signal(
-    nil, // No message name
-    wwr.NewPayload(wwr.EncodingUtf8, []byte("example")),
-  )
-
-  // Reply nothing
-  return nil, nil
+OnSignal implements the wwrclt.Implementation interface
+func (c *ClientImplementation) OnSignal(msg wwr.Message) {
+  // A server-side signal was received
+  msg.PayloadEncoding() // Signal payload encoding
+  msg.Payload()         // Signal payload data
 }
 ```
 
@@ -192,73 +187,39 @@ func OnRequest(
 Different kinds of requests and signals can be differentiated using the builtin namespacing feature.
 
 ```go
-func OnRequest(
-  _ context.Context,
-  _ wwr.Connection,
-  msg wwr.Message,
-) (wwr.Payload, error) {
-  switch msg.Name() {
-  case "auth":
-    // Authentication request
-    return wwr.NewPayload(
-      wwr.EncodingUtf8,
-      []byte("this is an auth request"),
-    )
-  case "query":
-    // Query request
-    return wwr.NewPayload(
-      wwr.EncodingUtf8,
-      []byte("this is a query request"),
-    )
-  }
-
-  // Otherwise return nothing
-  return nil, nil
-}
+reply, err := client.Request(
+	context.Background(),
+	[]byte("request name"),
+	wwr.Payload{},
+)
 ```
 ```go
-func OnSignal(
-  _ context.Context,
-  _ wwr.Connection,
-  msg wwr.Message,
-) {
-  switch msg.Name() {
-  case "event A":
-    // handle event A
-  case "event B":
-    // handle event B
-  }
+OnSignal implements the wwrclt.Implementation interface
+func (c *ClientImplementation) OnSignal(msg wwr.Message) {
+	switch msg.Name() {
+	case "event A":
+		// handle signal A
+	case "event B":
+		// handle signal B
+	}
 }
 ```
 
 ### Sessions
-Individual connections can get sessions assigned to identify them. The state of the session is automagically synchronized between the client and the server. WebWire doesn't enforce any kind of authentication technique though, it just provides a way to authenticate a connection. WebWire also doesn't enforce any kind of session storage, the user could implement a custom session manager implementing the WebWire `SessionManager` interface to use any kind of volatile or persistent session storage, be it a database or a simple in-memory map.
+Individual connections can get sessions assigned to identify them. The state of the session is automagically synchronized between the client and the server. WebWire doesn't enforce any kind of authentication technique though, it just provides a way to authenticate a connection.
 
 ```go
-func OnRequest(
-  _ context.Context,
-  conn wwr.Connection,
-  msg wwr.Message,
-) (wwr.Payload, error) {
-  // Verify credentials
-  if string(msg.Payload().Data()) != "secret:pass" {
-    return nil, wwr.ReqErr {
-      Code: "WRONG_CREDENTIALS",
-      Message: "Incorrect username or password, try again"
-    }
-  }
-  // Create session (will automatically synchronize to the client)
-  err := conn.CreateSession(/*something that implements wwr.SessionInfo*/)
-  if err != nil {
-    return nil, fmt.Errorf("Couldn't create session for some reason")
-  }
+OnSessionCreated implements the wwrclt.Implementation interface
+func (c *ClientImplementation) OnSessionCreated(newSession *wwr.Session) {
+	// A session was created on this connection
+}
 
-  // Complete request, reply nothing
-  return nil, nil
+OnDisconnected implements the wwrclt.Implementation interface
+func (c *ClientImplementation) OnDisconnected() {
+	// The session of this connection was closed
+	// by either the client, or the server
 }
 ```
-
-WebWire provides a basic file-based session manager implementation out of the box used by default when no custom session manager is defined. The default session manager creates a file with a .wwrsess extension for each opened session in the configured directory (which, by default, is the directory of the executable). During the restoration of a session the file is looked up by name using the session key, read and unmarshalled recreating the session object.
 
 ### Automatic Session Restoration
 The client will automatically try to restore the previously opened session during connection establishment when getting disconnected without explicitly closing the session before.
@@ -282,96 +243,20 @@ The only things to remember are:
 
 This feature is entirely optional and can be disabled at will which will cause `client.Request` and `client.RestoreSession` to immediately return a `ErrDisconnected` error when there's no connection at the time the request is made.
 
-### Graceful Shutdown
-The server will finish processing all ongoing signals and requests before closing when asked to shut down.
-```go
-// Will block until all handlers have finished
-server.Shutdown()
-```
-While the server is shutting down new connections are refused with `503 Service Unavailable` and incoming new requests from connected clients will be rejected with a special error: `RegErrSrvShutdown`. Any incoming signals from connected clients will be ignored during the shutdown.
-
-Server-side client connections also support graceful shutdown, a connection will be closed when all work on it is done,
-while incoming requests and signals are handled similarly to shutting down the server.
-```go
-// Will block until all work on this connection is done
-connection.Close()
-```
-
 ### Security
-Webwire can be hosted by a [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) protected HTTPS server to prevent [man-in-the-middle attacks](https://en.wikipedia.org/wiki/Man-in-the-middle_attack) as well as to verify the identity of the server. Setting up a TLS protected server is easy:
+If the webwire server is using a [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) protected transport implementation the client can establish a secure connection to prevent [man-in-the-middle attacks](https://en.wikipedia.org/wiki/Man-in-the-middle_attack) as well as to verify the identity of the server. To connect the client to a webwire server that's using a TLS protected transport implementation such as [webwire-go-gorilla over TLS](https://github.com/qbeon/webwire-go-gorilla) the appropriate transport implementation needs to be used:
 ```go
-// Setup a secure webwire server instance
-server, err := wwr.NewServer(
-	serverImplementation,
-	wwr.ServerOptions{
-    Host: "localhost:443",
-    // Use a TLS protected transport layer
-    Transport: &wwrfasthttp.Transport{
-			TLS: &wwrfasthttp.TLS{
-        // Provide key and certificate
-				CertFilePath:       "path/to/certificate.crt",
-        PrivateKeyFilePath: "path/to/private.key",
-        // Specify TLS configs
-        Config: &tls.Config{
-          MinVersion:               tls.VersionTLS12,
-		      CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256},
-		      PreferServerCipherSuites: true,
-		      CipherSuites: []uint16{
-			      tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			      tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-			      tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		      },
-        }
-			},
+connection, err := wwrclt.NewClient(
+	clientImplementation,
+	wwrclt.Options{/*...*/},
+	&wwrgorilla.ClientTransport{
+		ServerAddress: serverAddr,
+		Dialer:        gorillaws.Dialer{
+			TLSClientConfig: &tls.Config{},
 		},
 	},
 )
-if err != nil {
-	panic(fmt.Errorf("failed setting up wwr server: %s", err))
-}
-// Launch
-if err := server.Run(); err != nil {
-	panic(fmt.Errorf("wwr server failed: %s", err))
-}
 ```
-
-To connect the client to a TLS protected webwire server `"https"` must be used as the URL scheme:
-```go
-connection, err := wwrclt.NewClient(
-	url.URL{
-		Scheme: "https",
-		Host: "localhost:443",
-	},
-	clientImplementation,
-	wwrclt.Options{/*...*/},
-	nil, // Use default TLS configuration
-)
-```
-
-In case of a self-signed certificate used for testing purposes the client will fail to connect but TLS can be configured to skip the certificate verification (which **must be disabled in production!**):
-```go
-connection, err := wwrclt.NewClient(
-	url.URL{
-		Scheme: "https",
-		Host: "localhost:443",
-	},
-	clientImplementation,
-	wwrclt.Options{/*...*/},
-	/*
-		--------------------------------------------------------------
-		WARNING! NEVER DISABLE CERTIFICATE VERIFICATION IN PRODUCTION!
-		--------------------------------------------------------------
-		InsecureSkipVerify is enabled for testing purposes only
-		to allow the use of a self-signed localhost SSL certificate.
-		Enabling this option in production is dangerous and irresponsible.
-	*/
-	&tls.Config{
-		InsecureSkipVerify: true,
-	},
-)
-```
-
-An alternative, somewhat safer approach would be to install the root CA certificate on the test system to make clients accept the self-signed server ceretificate (which was signed using the installed root certificate) instead of enabling `InsecureSkipVerify`.
 
 ----
 
