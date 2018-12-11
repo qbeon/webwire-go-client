@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -40,49 +41,91 @@ func (clt *client) dial() (srvConf message.ServerConfiguration, err error) {
 		// Get a message buffer from the pool
 		msg := clt.messagePool.Get()
 
-		// Abort if timed out
-		if atomic.LoadUint32(&abortAwait) > 0 {
+		failureCleanup := func() {
 			clt.conn.Close()
 			msg.Close()
+		}
+
+		// Abort if timed out
+		if atomic.LoadUint32(&abortAwait) > 0 {
+			failureCleanup()
 			return
 		}
 
-		// Await the server configuration handshake response
+		// Await the server accept-conf response
 		if err := clt.conn.Read(msg, deadline); err != nil {
 			if err.IsCloseErr() {
 				// Regular connection closure
 				result <- dialResult{err: wwr.ErrDisconnected{
 					Cause: fmt.Errorf(
-						"couldn't read srv-conf message during dial: %s",
+						"couldn't read accept-conf message during dial: %s",
 						err,
 					),
 				}}
 			} else {
-				// Error during reading of server configuration message
+				// Error during reading of server accept-conf message
 				result <- dialResult{err: fmt.Errorf(
 					"read err: %s",
 					err.Error(),
 				)}
 			}
-			clt.conn.Close()
-			msg.Close()
+			failureCleanup()
 			return
 		}
 
 		// Abort if timed out
 		if atomic.LoadUint32(&abortAwait) > 0 {
-			clt.conn.Close()
-			msg.Close()
+			failureCleanup()
 			return
 		}
 
 		if msg.MsgType != message.MsgAcceptConf {
 			result <- dialResult{err: fmt.Errorf(
-				"unexpected message type: %d (expected server config message)",
+				"unexpected message type: %d (expected accept-conf message)",
 				msg.MsgType,
 			)}
-			clt.conn.Close()
-			msg.Close()
+			failureCleanup()
+			return
+		}
+
+		// Verify the protocol version
+		if err := verifyProtocolVersion(
+			msg.ServerConfiguration.MajorProtocolVersion,
+			msg.ServerConfiguration.MinorProtocolVersion,
+		); err != nil {
+			result <- dialResult{err: err}
+			failureCleanup()
+			return
+		}
+
+		// Ensure sub-protocols match
+		if msg.ServerConfiguration.SubProtocolName != nil &&
+			clt.options.SubProtocolName == nil {
+			result <- dialResult{err: fmt.Errorf(
+				"mismatching sub-protocols (server: %s; client: nil)",
+				msg.ServerConfiguration.SubProtocolName,
+			)}
+			failureCleanup()
+			return
+		} else if msg.ServerConfiguration.SubProtocolName == nil &&
+			clt.options.SubProtocolName != nil {
+			result <- dialResult{err: fmt.Errorf(
+				"mismatching sub-protocols (server: nil; client: %s)",
+				clt.options.SubProtocolName,
+			)}
+			failureCleanup()
+			return
+		} else if msg.ServerConfiguration.SubProtocolName != nil &&
+			clt.options.SubProtocolName != nil && !bytes.Equal(
+			msg.ServerConfiguration.SubProtocolName,
+			clt.options.SubProtocolName,
+		) {
+			result <- dialResult{err: fmt.Errorf(
+				"mismatching sub-protocols (server: %s; client: %s)",
+				msg.ServerConfiguration.SubProtocolName,
+				clt.options.SubProtocolName,
+			)}
+			failureCleanup()
 			return
 		}
 
@@ -94,17 +137,7 @@ func (clt *client) dial() (srvConf message.ServerConfiguration, err error) {
 				msg.ServerConfiguration.MessageBufferSize,
 				clt.options.MessageBufferSize,
 			)}
-			msg.Close()
-			return
-		}
-
-		// Verify the protocol version
-		if err := verifyProtocolVersion(
-			msg.ServerConfiguration.MajorProtocolVersion,
-			msg.ServerConfiguration.MinorProtocolVersion,
-		); err != nil {
-			result <- dialResult{err: err}
-			msg.Close()
+			failureCleanup()
 			return
 		}
 

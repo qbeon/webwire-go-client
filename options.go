@@ -45,6 +45,10 @@ type Options struct {
 
 	// MessageBufferSize defines the size of the inbound message buffer
 	MessageBufferSize uint32
+
+	// SubProtocolName defines the name expected webwire sub-protocol. Will
+	// default to plain webwire if SubProtocolName is nil.
+	SubProtocolName []byte
 }
 
 // Prepare validates the specified options and sets the default values for
