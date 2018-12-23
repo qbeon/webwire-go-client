@@ -25,7 +25,6 @@ func TestRestoreInexistentSession(t *testing.T) {
 		wwrclt.Options{
 			DefaultRequestTimeout: 2 * time.Second,
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 

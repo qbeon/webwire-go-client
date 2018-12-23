@@ -28,7 +28,6 @@ func TestSubProtocolMismatch(t *testing.T) {
 			Autoconnect:     wwr.Disabled,
 			SubProtocolName: []byte("clientprotocol"),
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 	require.Error(t, clientMismatch.Connection.Connect())
@@ -49,7 +48,6 @@ func TestSubProtocolMismatch(t *testing.T) {
 			Autoconnect:     wwr.Disabled,
 			SubProtocolName: []byte("clientprotocol"),
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 	require.Error(t, clientNoSubProto.Connection.Connect())
@@ -71,7 +69,6 @@ func TestSubProtocolMismatch(t *testing.T) {
 		wwrclt.Options{
 			Autoconnect: wwr.Disabled,
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 	require.Error(t, clientNoCltSubProto.Connection.Connect())

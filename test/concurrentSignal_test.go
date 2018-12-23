@@ -39,7 +39,6 @@ func TestConcurrentSignal(t *testing.T) {
 		wwrclt.Options{
 			DefaultRequestTimeout: 2 * time.Second,
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 	defer client.Connection.Close()

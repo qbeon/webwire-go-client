@@ -97,11 +97,10 @@ func (clt *client) connect() error {
 	)
 
 	// Try to restore session if necessary
-	restoredSession, err := clt.requestSessionRestoration(
+	if err := clt.restoreSession(
 		ctx,
 		[]byte(sessionKey),
-	)
-	if err != nil {
+	); err != nil {
 		// Just log a warning and still return nil,
 		// even if session restoration failed,
 		// because we only care about the connection establishment
@@ -115,14 +114,12 @@ func (clt *client) connect() error {
 		clt.sessionLock.Lock()
 		clt.session = nil
 		clt.sessionLock.Unlock()
+
 		clt.connectLock.Unlock()
 		closeCtx()
 		return nil
 	}
 
-	clt.sessionLock.Lock()
-	clt.session = restoredSession
-	clt.sessionLock.Unlock()
 	clt.connectLock.Unlock()
 	closeCtx()
 	return nil

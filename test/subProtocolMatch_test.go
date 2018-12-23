@@ -26,7 +26,6 @@ func TestSubProtocolMatch(t *testing.T) {
 			Autoconnect:     wwr.Disabled,
 			SubProtocolName: []byte("sharedprotocol"),
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 

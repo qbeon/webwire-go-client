@@ -149,7 +149,6 @@ func TestSessionInfo(t *testing.T) {
 			DefaultRequestTimeout: 2 * time.Second,
 			SessionInfoParser:     testClientSessionInfoSessionInfoParser,
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 

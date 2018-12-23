@@ -27,7 +27,6 @@ func TestRequestAutoconn(t *testing.T) {
 			DefaultRequestTimeout: 2 * time.Second,
 			Autoconnect:           wwr.Enabled,
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 

@@ -70,11 +70,7 @@ func TestAutoSessionRestoration(t *testing.T) {
 	)
 
 	// Initialize client
-	client := setup.newClient(
-		wwrclt.Options{},
-		nil, // Use the default transport implementation
-		clientHooks{},
-	)
+	client := setup.newClient(wwrclt.Options{}, clientHooks{})
 
 	require.NoError(t, client.Connection.Connect())
 

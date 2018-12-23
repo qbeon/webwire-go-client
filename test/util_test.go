@@ -91,18 +91,13 @@ func (setup *serverSetup) newClient(
 // newClient sets up a new test client instance
 func (setup *serverSetupTest) newClient(
 	options wwrclt.Options,
-	transport wwr.ClientTransport,
 	hooks clientHooks,
 ) *client {
-	if transport == nil {
-		transport = &memchan.ClientTransport{
-			Server: setup.Transport.(*memchan.Transport),
-		}
-	}
-
 	clt, err := newClient(
 		options,
-		transport,
+		&memchan.ClientTransport{
+			Server: setup.Transport.(*memchan.Transport),
+		},
 		hooks,
 	)
 	require.NoError(setup.t, err)

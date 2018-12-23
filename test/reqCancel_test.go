@@ -39,7 +39,6 @@ func TestReqCancel(t *testing.T) {
 		wwrclt.Options{
 			DefaultRequestTimeout: 5 * time.Second,
 		},
-		nil, // Use the default transport implementation
 		clientHooks{},
 	)
 
