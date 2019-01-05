@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -9,15 +8,6 @@ import (
 	wwr "github.com/qbeon/webwire-go"
 	"github.com/qbeon/webwire-go/message"
 )
-
-func copyBytes(source []byte) []byte {
-	if source == nil {
-		return nil
-	}
-	result := make([]byte, len(source))
-	copy(result, source)
-	return result
-}
 
 // dial tries to dial in the server and await an approval including the endpoint
 // metadata before the configured dialing timeout is reached.
@@ -108,32 +98,11 @@ func (clt *client) dial() (srvConf message.ServerConfiguration, err error) {
 		}
 
 		// Ensure sub-protocols match
-		clientSubProtoName := copyBytes(clt.options.SubProtocolName)
-		serverSubProtoName := copyBytes(msg.ServerConfiguration.SubProtocolName)
-
-		if serverSubProtoName != nil && clientSubProtoName == nil {
-			result <- dialResult{err: ErrMismatchSubProto{
-				ServerSubProto: serverSubProtoName,
-				ClientSubProto: nil,
-			}}
-			failureCleanup()
-			return
-		} else if serverSubProtoName == nil && clientSubProtoName != nil {
-			result <- dialResult{err: ErrMismatchSubProto{
-				ServerSubProto: nil,
-				ClientSubProto: clientSubProtoName,
-			}}
-			failureCleanup()
-			return
-		} else if serverSubProtoName != nil &&
-			clientSubProtoName != nil && !bytes.Equal(
-			serverSubProtoName,
-			clientSubProtoName,
-		) {
-			result <- dialResult{err: ErrMismatchSubProto{
-				ServerSubProto: serverSubProtoName,
-				ClientSubProto: clientSubProtoName,
-			}}
+		if subProtoErr := compareSubProtocols(
+			msg.ServerConfiguration.SubProtocolName,
+			clt.options.SubProtocolName,
+		); subProtoErr != nil {
+			result <- dialResult{err: subProtoErr}
 			failureCleanup()
 			return
 		}
