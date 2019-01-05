@@ -50,9 +50,7 @@ func TestOnSessionCreated(t *testing.T) {
 			},
 		},
 	)
-	defer client.Connection.Close()
-
-	require.NoError(t, client.Connection.Connect())
+	require.NoError(t, client.Connection.Connect(context.Background()))
 
 	// Send authentication request and await reply
 	reply, err := client.Connection.Request(

@@ -42,9 +42,7 @@ func TestConcurrentRequest(t *testing.T) {
 		},
 		clientHooks{},
 	)
-	defer client.Connection.Close()
-
-	require.NoError(t, client.Connection.Connect())
+	require.NoError(t, client.Connection.Connect(context.Background()))
 
 	sendRequest := func() {
 		defer finished.Done()

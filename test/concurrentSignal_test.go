@@ -41,9 +41,7 @@ func TestConcurrentSignal(t *testing.T) {
 		},
 		clientHooks{},
 	)
-	defer client.Connection.Close()
-
-	require.NoError(t, client.Connection.Connect())
+	require.NoError(t, client.Connection.Connect(context.Background()))
 
 	sendSignal := func() {
 		defer finished.Done()

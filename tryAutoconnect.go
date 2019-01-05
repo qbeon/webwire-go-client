@@ -11,14 +11,23 @@ import (
 // will spawn a new autoconnector goroutine which will periodically poll the
 // server and check whether it's available again. If the autoconnector goroutine
 // has already been spawned then tryAutoconnect will just await the connection
-// or timeout respectively blocking the calling goroutine.
+// or timeout respectively blocking the calling goroutine. If autoconnect is
+// temporarily disabled then tryAutoconnect will reactivate it.
 //
-// ctxHasDeadline should ne set to false if the deadline of the context was
+// ctxHasDeadline should be set to false if the deadline of the context was
 // assigned automatically
 func (clt *client) tryAutoconnect(
 	ctx context.Context,
 	ctxHasDeadline bool,
 ) error {
+	// If autoconnect was just temporarily deactivated then reactivate it and
+	// try to establish a connection
+	atomic.CompareAndSwapInt32(
+		&clt.autoconnect,
+		autoconnectDeactivated,
+		autoconnectEnabled,
+	)
+
 	if clt.Status() == StatusConnected {
 		return nil
 	} else if atomic.LoadInt32(&clt.autoconnect) != autoconnectEnabled {

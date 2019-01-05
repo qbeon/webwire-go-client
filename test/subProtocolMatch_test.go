@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"testing"
 
 	wwr "github.com/qbeon/webwire-go"
@@ -23,11 +24,10 @@ func TestSubProtocolMatch(t *testing.T) {
 	// Initialize client
 	client := setup.newClient(
 		wwrclt.Options{
-			Autoconnect:     wwr.Disabled,
 			SubProtocolName: []byte("sharedprotocol"),
 		},
 		clientHooks{},
 	)
 
-	require.NoError(t, client.Connection.Connect())
+	require.NoError(t, client.Connection.Connect(context.Background()))
 }

@@ -63,7 +63,7 @@ func TestAutoSessionRestoration(t *testing.T) {
 		},
 	)
 
-	require.NoError(t, client.Connection.Connect())
+	require.NoError(t, client.Connection.Connect(context.Background()))
 
 	// Create session
 	require.NoError(t, client.Connection.Signal(
@@ -80,7 +80,7 @@ func TestAutoSessionRestoration(t *testing.T) {
 	client.Connection.Close()
 
 	// Reconnect
-	require.NoError(t, client.Connection.Connect())
+	require.NoError(t, client.Connection.Connect(context.Background()))
 
 	lookupTriggered.Wait()
 	hookTriggered.Wait()

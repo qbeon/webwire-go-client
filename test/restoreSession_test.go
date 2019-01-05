@@ -59,7 +59,7 @@ func TestRestoreSession(t *testing.T) {
 		)
 
 		if clientOptions.Autoconnect == wwr.Disabled {
-			require.NoError(t, client.Connection.Connect())
+			require.NoError(t, client.Connection.Connect(context.Background()))
 		}
 
 		// Send restoration request and await reply

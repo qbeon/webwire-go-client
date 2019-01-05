@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -35,7 +36,7 @@ func TestStatus(t *testing.T) {
 	)
 
 	// Connect to the server
-	require.NoError(t, client.Connection.Connect())
+	require.NoError(t, client.Connection.Connect(context.Background()))
 
 	require.Equal(t,
 		wwrclt.StatusConnected, client.Connection.Status(),

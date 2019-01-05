@@ -41,8 +41,7 @@ func TestReqCancel(t *testing.T) {
 		},
 		clientHooks{},
 	)
-
-	require.NoError(t, client.Connection.Connect())
+	require.NoError(t, client.Connection.Connect(context.Background()))
 
 	cancelableCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -89,18 +90,15 @@ func (clt *client) Status() Status {
 	return status
 }
 
-// Connect connects the client to the configured server and
-// returns an error in case of a connection failure.
-// Automatically tries to restore the previous session.
-// Enables autoconnect if it was disabled
-func (clt *client) Connect() error {
-	atomic.CompareAndSwapInt32(
-		&clt.autoconnect,
-		autoconnectDeactivated,
-		autoconnectEnabled,
-	)
+// Connect implements the Client interface
+func (clt *client) Connect(ctx context.Context) error {
+	// Try only once if autoconnect is disabled
+	if atomic.LoadInt32(&clt.autoconnect) == autoconnectDisabled {
+		return clt.connect()
+	}
 
-	return clt.connect()
+	_, hasDeadline := ctx.Deadline()
+	return clt.tryAutoconnect(ctx, hasDeadline)
 }
 
 // Session returns an exact copy of the session object or nil if there's no

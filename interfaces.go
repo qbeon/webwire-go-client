@@ -16,11 +16,12 @@ type Client interface {
 	// A disabled client won't autoconnect until enabled again
 	Status() Status
 
-	// Connect connects the client to the configured server and
-	// returns an error in case of a connection failure.
-	// Automatically tries to restore the previous session.
-	// Enables autoconnect if it was previously disabled
-	Connect() error
+	// Connect tries to connect the client once if autoconnect is disabled,
+	// otherwise tries to connect until either a connection is established or
+	// the context deadline is reached. Returns an error in case of a connection
+	// establishment failure. Automatically tries to restore the previous
+	// session. Enables autoconnect if it was temporarily deactivated.
+	Connect(context.Context) error
 
 	// Request sends a request containing the given payload to the server and
 	// asynchronously returns the servers response. It blocks until either a

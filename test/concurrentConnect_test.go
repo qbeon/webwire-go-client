@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -31,11 +32,10 @@ func TestConcurrentConnect(t *testing.T) {
 		},
 		clientHooks{},
 	)
-	defer client.Connection.Close()
 
 	connect := func() {
 		defer finished.Done()
-		assert.NoError(t, client.Connection.Connect())
+		assert.NoError(t, client.Connection.Connect(context.Background()))
 	}
 
 	for i := 0; i < concurrentAccessors; i++ {

@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -11,8 +10,9 @@ import (
 	reqman "github.com/qbeon/webwire-go/requestManager"
 )
 
-// NewClient creates a new client instance.
-// The new client will immediately begin connecting if autoconnect is enabled
+// NewClient creates a new client instance. A connection on this client must be
+// established manually even if autoconnect is enabled because NewClient only
+// initializes the instance.
 func NewClient(
 	implementation Implementation,
 	options Options,
@@ -31,8 +31,8 @@ func NewClient(
 		return nil, err
 	}
 
-	// Enable autoconnect by default
-	autoconnect := autoconnectStatus(autoconnectEnabled)
+	// Diactivate autoconnect by default and disable it completely if configured
+	autoconnect := autoconnectStatus(autoconnectDeactivated)
 	if options.Autoconnect == webwire.Disabled {
 		autoconnect = autoconnectDisabled
 	}
@@ -47,7 +47,7 @@ func NewClient(
 	<-dialingTimer.C
 
 	// Initialize new client
-	newClt := &client{
+	return &client{
 		options:        options,
 		impl:           implementation,
 		dialingTimer:   dialingTimer,
@@ -66,16 +66,5 @@ func NewClient(
 		heartbeat:      newHeartbeat(conn, options.ErrorLog),
 		requestManager: reqman.NewRequestManager(),
 		messagePool:    message.NewSyncPool(options.MessageBufferSize, 1024),
-	}
-
-	if autoconnect == autoconnectEnabled {
-		// Asynchronously connect to the server
-		// immediately after initialization.
-		// Call in another goroutine to prevent blocking
-		// the constructor function caller.
-		// Set timeout to zero, try indefinitely until connected
-		go newClt.tryAutoconnect(context.Background(), false)
-	}
-
-	return newClt, nil
+	}, nil
 }

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"testing"
 
 	wwr "github.com/qbeon/webwire-go"
@@ -10,66 +11,79 @@ import (
 
 // TestSubProtocolMismatch tests dial failure on sub-protocol mismatch
 func TestSubProtocolMismatch(t *testing.T) {
-	/* SERVER: B; CLIENT: A */
 
-	// Initialize server
-	setupMismatch := setupTestServer(
-		t,
-		&ServerImpl{},
-		wwr.ServerOptions{
-			SubProtocolName: []byte("serverprotocol"),
-		},
-		nil, // Use the default transport implementation
-	)
+	t.Run("AB", func(t *testing.T) {
+		/* SERVER: A; CLIENT: B */
 
-	// Initialize client
-	clientMismatch := setupMismatch.newClient(
-		wwrclt.Options{
-			Autoconnect:     wwr.Disabled,
-			SubProtocolName: []byte("clientprotocol"),
-		},
-		clientHooks{},
-	)
-	require.Error(t, clientMismatch.Connection.Connect())
+		// Initialize server
+		setupMismatch := setupTestServer(
+			t,
+			&ServerImpl{},
+			wwr.ServerOptions{
+				SubProtocolName: []byte("serverprotocol"),
+			},
+			nil, // Use the default transport implementation
+		)
 
-	/* SERVER: nil; CLIENT: A */
+		// Initialize client
+		clientMismatch := setupMismatch.newClient(
+			wwrclt.Options{
+				Autoconnect:     wwr.Disabled,
+				SubProtocolName: []byte("clientprotocol"),
+			},
+			clientHooks{},
+		)
 
-	// Initialize server (no sub-protocol)
-	setupNoSubProto := setupTestServer(
-		t,
-		&ServerImpl{},
-		wwr.ServerOptions{},
-		nil, // Use the default transport implementation
-	)
+		err := clientMismatch.Connection.Connect(context.Background())
+		require.Error(t, err)
+	})
 
-	// Initialize client
-	clientNoSubProto := setupNoSubProto.newClient(
-		wwrclt.Options{
-			Autoconnect:     wwr.Disabled,
-			SubProtocolName: []byte("clientprotocol"),
-		},
-		clientHooks{},
-	)
-	require.Error(t, clientNoSubProto.Connection.Connect())
+	t.Run("NB", func(t *testing.T) {
+		/* SERVER: nil; CLIENT: B */
 
-	/* SERVER: A; CLIENT: nil */
+		// Initialize server (no sub-protocol)
+		setupNoSubProto := setupTestServer(
+			t,
+			&ServerImpl{},
+			wwr.ServerOptions{},
+			nil, // Use the default transport implementation
+		)
 
-	// Initialize server (no sub-protocol)
-	setupNoCltSubProto := setupTestServer(
-		t,
-		&ServerImpl{},
-		wwr.ServerOptions{
-			SubProtocolName: []byte("serverprotocol"),
-		},
-		nil, // Use the default transport implementation
-	)
+		// Initialize client
+		clientNoSubProto := setupNoSubProto.newClient(
+			wwrclt.Options{
+				Autoconnect:     wwr.Disabled,
+				SubProtocolName: []byte("clientprotocol"),
+			},
+			clientHooks{},
+		)
 
-	// Initialize client
-	clientNoCltSubProto := setupNoCltSubProto.newClient(
-		wwrclt.Options{
-			Autoconnect: wwr.Disabled,
-		},
-		clientHooks{},
-	)
-	require.Error(t, clientNoCltSubProto.Connection.Connect())
+		err := clientNoSubProto.Connection.Connect(context.Background())
+		require.Error(t, err)
+	})
+
+	t.Run("AN", func(t *testing.T) {
+		/* SERVER: A; CLIENT: nil */
+
+		// Initialize server (no sub-protocol)
+		setupNoCltSubProto := setupTestServer(
+			t,
+			&ServerImpl{},
+			wwr.ServerOptions{
+				SubProtocolName: []byte("serverprotocol"),
+			},
+			nil, // Use the default transport implementation
+		)
+
+		// Initialize client
+		clientNoCltSubProto := setupNoCltSubProto.newClient(
+			wwrclt.Options{
+				Autoconnect: wwr.Disabled,
+			},
+			clientHooks{},
+		)
+
+		err := clientNoCltSubProto.Connection.Connect(context.Background())
+		require.Error(t, err)
+	})
 }
