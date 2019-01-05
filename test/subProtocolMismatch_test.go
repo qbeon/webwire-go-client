@@ -35,7 +35,17 @@ func TestSubProtocolMismatch(t *testing.T) {
 		)
 
 		err := clientMismatch.Connection.Connect(context.Background())
-		require.Error(t, err)
+		require.IsType(t, wwrclt.ErrMismatchSubProto{}, err)
+		require.Equal(
+			t,
+			[]byte("serverprotocol"),
+			err.(wwrclt.ErrMismatchSubProto).ServerSubProto,
+		)
+		require.Equal(
+			t,
+			[]byte("clientprotocol"),
+			err.(wwrclt.ErrMismatchSubProto).ClientSubProto,
+		)
 	})
 
 	t.Run("NB", func(t *testing.T) {
@@ -59,7 +69,13 @@ func TestSubProtocolMismatch(t *testing.T) {
 		)
 
 		err := clientNoSubProto.Connection.Connect(context.Background())
-		require.Error(t, err)
+		require.IsType(t, wwrclt.ErrMismatchSubProto{}, err)
+		require.Nil(t, err.(wwrclt.ErrMismatchSubProto).ServerSubProto)
+		require.Equal(
+			t,
+			[]byte("clientprotocol"),
+			err.(wwrclt.ErrMismatchSubProto).ClientSubProto,
+		)
 	})
 
 	t.Run("AN", func(t *testing.T) {
@@ -84,6 +100,12 @@ func TestSubProtocolMismatch(t *testing.T) {
 		)
 
 		err := clientNoCltSubProto.Connection.Connect(context.Background())
-		require.Error(t, err)
+		require.IsType(t, wwrclt.ErrMismatchSubProto{}, err)
+		require.Equal(
+			t,
+			[]byte("serverprotocol"),
+			err.(wwrclt.ErrMismatchSubProto).ServerSubProto,
+		)
+		require.Nil(t, err.(wwrclt.ErrMismatchSubProto).ClientSubProto)
 	})
 }

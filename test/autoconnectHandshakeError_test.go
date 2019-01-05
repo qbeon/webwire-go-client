@@ -31,6 +31,17 @@ func TestAutoconnectHandshakeError(t *testing.T) {
 		)
 		err := newClient.Connection.Connect(context.Background())
 		require.Error(t, err)
+		require.IsType(t, wwrclt.ErrMismatchSubProto{}, err)
+		require.Equal(
+			t,
+			[]byte("serverprotocol"),
+			err.(wwrclt.ErrMismatchSubProto).ServerSubProto,
+		)
+		require.Equal(
+			t,
+			[]byte("clientprotocol"),
+			err.(wwrclt.ErrMismatchSubProto).ClientSubProto,
+		)
 	})
 
 	t.Run("SubProtocolMismatch_NB", func(t *testing.T) {
@@ -51,6 +62,13 @@ func TestAutoconnectHandshakeError(t *testing.T) {
 		)
 		err := newClient.Connection.Connect(context.Background())
 		require.Error(t, err)
+		require.IsType(t, wwrclt.ErrMismatchSubProto{}, err)
+		require.Nil(t, err.(wwrclt.ErrMismatchSubProto).ServerSubProto)
+		require.Equal(
+			t,
+			[]byte("clientprotocol"),
+			err.(wwrclt.ErrMismatchSubProto).ClientSubProto,
+		)
 	})
 
 	t.Run("SubProtocolMismatch_AN", func(t *testing.T) {
@@ -68,5 +86,12 @@ func TestAutoconnectHandshakeError(t *testing.T) {
 		newClient := setupMismatch.newClient(wwrclt.Options{}, clientHooks{})
 		err := newClient.Connection.Connect(context.Background())
 		require.Error(t, err)
+		require.IsType(t, wwrclt.ErrMismatchSubProto{}, err)
+		require.Equal(
+			t,
+			[]byte("serverprotocol"),
+			err.(wwrclt.ErrMismatchSubProto).ServerSubProto,
+		)
+		require.Nil(t, err.(wwrclt.ErrMismatchSubProto).ClientSubProto)
 	})
 }

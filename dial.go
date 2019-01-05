@@ -10,6 +10,15 @@ import (
 	"github.com/qbeon/webwire-go/message"
 )
 
+func copyBytes(source []byte) []byte {
+	if source == nil {
+		return nil
+	}
+	result := make([]byte, len(source))
+	copy(result, source)
+	return result
+}
+
 // dial tries to dial in the server and await an approval including the endpoint
 // metadata before the configured dialing timeout is reached.
 // clt.dial should only be called from within clt.connect.
@@ -99,32 +108,32 @@ func (clt *client) dial() (srvConf message.ServerConfiguration, err error) {
 		}
 
 		// Ensure sub-protocols match
-		if msg.ServerConfiguration.SubProtocolName != nil &&
-			clt.options.SubProtocolName == nil {
-			result <- dialResult{err: fmt.Errorf(
-				"mismatching sub-protocols (server: %s; client: nil)",
-				msg.ServerConfiguration.SubProtocolName,
-			)}
+		clientSubProtoName := copyBytes(clt.options.SubProtocolName)
+		serverSubProtoName := copyBytes(msg.ServerConfiguration.SubProtocolName)
+
+		if serverSubProtoName != nil && clientSubProtoName == nil {
+			result <- dialResult{err: ErrMismatchSubProto{
+				ServerSubProto: serverSubProtoName,
+				ClientSubProto: nil,
+			}}
 			failureCleanup()
 			return
-		} else if msg.ServerConfiguration.SubProtocolName == nil &&
-			clt.options.SubProtocolName != nil {
-			result <- dialResult{err: fmt.Errorf(
-				"mismatching sub-protocols (server: nil; client: %s)",
-				clt.options.SubProtocolName,
-			)}
+		} else if serverSubProtoName == nil && clientSubProtoName != nil {
+			result <- dialResult{err: ErrMismatchSubProto{
+				ServerSubProto: nil,
+				ClientSubProto: clientSubProtoName,
+			}}
 			failureCleanup()
 			return
-		} else if msg.ServerConfiguration.SubProtocolName != nil &&
-			clt.options.SubProtocolName != nil && !bytes.Equal(
-			msg.ServerConfiguration.SubProtocolName,
-			clt.options.SubProtocolName,
+		} else if serverSubProtoName != nil &&
+			clientSubProtoName != nil && !bytes.Equal(
+			serverSubProtoName,
+			clientSubProtoName,
 		) {
-			result <- dialResult{err: fmt.Errorf(
-				"mismatching sub-protocols (server: %s; client: %s)",
-				msg.ServerConfiguration.SubProtocolName,
-				clt.options.SubProtocolName,
-			)}
+			result <- dialResult{err: ErrMismatchSubProto{
+				ServerSubProto: serverSubProtoName,
+				ClientSubProto: clientSubProtoName,
+			}}
 			failureCleanup()
 			return
 		}
